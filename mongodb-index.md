@@ -19,6 +19,4 @@ Query planner : 이전에 실행한 쿼리 플랜을 캐싱 해놓음, 캐싱된
 
 몽고디비는 많은 소켓을 지원, 다큐먼트 트랜잭션의 지원이 필요 하지 않다면 여러 쓰레드로 한번에 처리도 괜찮음
 
-한일 : ttl index, index query tuning, multi thread, shop renewal, ignite improvement, batch bulk insert, cms common method
-
 -- 몽고디비 사용 의미? 장점?,엔진, 인덱스, 최적화, 트랜잭션
