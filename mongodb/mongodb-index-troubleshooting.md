@@ -148,4 +148,63 @@ query planner가 캐싱된 쿼리 플랜이 없다면 가능한 모든 쿼리 �
 인덱스가 최적화가 되어있지 않기 때문에 age_1_location_1 인덱스가 채택되지 않는 경우가 발생한다.
 따라서 인덱스를 location_1_age_1를 생성하고 location_1_age_1, location_1 둘다 삭제 해야한다.
 
-그리고 중요한 한가지
+주의할점들
+1. 너무 많은 인덱스
+   - 인덱스를 많이 만든다고 해서 빨라지지 않을 수 있다.
+   - 메모리에 인덱스가 차지하는 용량이 많아져서 메모리와 디스크 사이에
+     Frequent Swap이 많이 발생하게 되고 성능이 떨어짐
+   - 데이터가 업데이트 될 때마다 인덱스 또한 업데이트 되어야하기 때문에 write 성능이 감소 -> read 성능 감소로 이어짐
+   - 인덱스 필드의 시작이 같다면 정리 대상
+
+   ```
+   ex) {location : 1, age : 1}, {location : 1} -> location_1은 정리 대상
+   ```
+   - 
+
+2. 멀티 소팅
+
+   - 정렬 또한 인덱스와 일치하게 해야 한다.
+   
+   ```
+   db.User.createIndex({location : 1, age : 1});
+   
+   db.User.find({}).sort({location : 1, age : 1}); // covered
+   db.User.find({}).sort({age : 1, location : 1}); // not covered
+   ```
+   
+2. 멀티 소팅 방향
+   - 싱글 인덱스는 고려하지 않아도됨. 양방향 모두 지원하기 때문.
+   - 복합 인덱스의 경우 방향이 중요
+
+   ```
+   db.User.createIndex({location : 1, age : 1});
+   
+   - covered
+      db.User.find({}).sort({location : 1, age : 1});
+      db.User.find({}).sort({location : -1, age : -1});
+      db.User.find({}).sort({location : -1});
+   
+   - not covered
+      db.User.find({}).sort({location : -1, age : 1});
+      db.User.find({}).sort({location : 1, age : -1});
+      db.User.find({}).sort({age : 1});
+   
+   - 적절한 인덱스 생성
+      db.User.createIndex({location : 1, age : 1});
+      db.User.createIndex({location : -1, age : 1});
+      db.User.createIndex({age : 1, location : 1});
+      db.User.createIndex({age : -1, location : 1});
+   
+      두 필드의 모든방향을 커버 할 수 있음.
+   
+   ex) db.User.find({}).sort({location : 1, age : -1});
+    - {location : -1, age : 1} 역방향
+   
+   
+   ```
+
+
+
+출처
+https://tv.naver.com/v/11267386
+https://emptysqua.re/blog/optimizing-mongodb-compound-indexes/#comment-777924667
