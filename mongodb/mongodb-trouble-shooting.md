@@ -97,12 +97,10 @@
 
 **age_1_location_1 index 구조**는 아래와 같다.
    ```
-   {
-      {userId : NumberInt(200), age : NumberInt(20), location : '서울'},
-      {userId : NumberInt(202), age : NumberInt(22), location : '부산'},
-      {userId : NumberInt(201), age : NumberInt(23), location : '서울'},
-      {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
-   }
+      {20, '서울'} -> {userId : NumberInt(200), age : NumberInt(20), location : '서울'}
+      {22, '부산'} -> {userId : NumberInt(202), age : NumberInt(22), location : '부산'}
+      {23, '서울'} -> {userId : NumberInt(201), age : NumberInt(23), location : '서울'}
+      {31, '인천'} -> {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
    ```
 
 query는 age 범위를 먼저 찾고 location 조건을 찾아야 하므로 index 탐색은 3이라고 예상했다.<br> 
@@ -130,12 +128,10 @@ query는 age 범위를 먼저 찾고 location 조건을 찾아야 하므로 inde
 location_1_age_1 index 구조는 아래와 같다.
 
    ```
-   {
-      {userId : NumberInt(202), age : NumberInt(22), location : '부산'},
-      {userId : NumberInt(200), age : NumberInt(20), location : '서울'},
-      {userId : NumberInt(201), age : NumberInt(23), location : '서울'},
-      {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
-   }
+   {'부산', 22} -> {userId : NumberInt(202), age : NumberInt(22), location : '부산'}
+   {'서울', 20} -> {userId : NumberInt(200), age : NumberInt(20), location : '서울'}
+   {'서울', 23} -> {userId : NumberInt(201), age : NumberInt(23), location : '서울'}
+   {'인천', 31} -> {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
    ```
 
 드디어 totalKeysExamined 2로 되어 원하는 결과가 나왔다. 
