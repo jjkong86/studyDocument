@@ -25,7 +25,7 @@
    {userId : NumberInt(200), age : NumberInt(20), location : '서울'},
    {userId : NumberInt(201), age : NumberInt(23), location : '서울'},
    {userId : NumberInt(202), age : NumberInt(22), location : '부산'},
-   {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
+   {userId : NumberInt(203), age : NumberInt(31), location : '서울'}
    ])
    ```
 ---
@@ -100,7 +100,7 @@
       {20, '서울'} -> {userId : NumberInt(200), age : NumberInt(20), location : '서울'}
       {22, '부산'} -> {userId : NumberInt(202), age : NumberInt(22), location : '부산'}
       {23, '서울'} -> {userId : NumberInt(201), age : NumberInt(23), location : '서울'}
-      {31, '인천'} -> {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
+      {31, '인천'} -> {userId : NumberInt(203), age : NumberInt(31), location : '서울'}
    ```
 
 query는 age 범위를 먼저 찾고 location 조건을 찾아야 하므로 index 탐색은 3이라고 예상했다.<br> 
@@ -131,7 +131,7 @@ location_1_age_1 index 구조는 아래와 같다.
    {'부산', 22} -> {userId : NumberInt(202), age : NumberInt(22), location : '부산'}
    {'서울', 20} -> {userId : NumberInt(200), age : NumberInt(20), location : '서울'}
    {'서울', 23} -> {userId : NumberInt(201), age : NumberInt(23), location : '서울'}
-   {'인천', 31} -> {userId : NumberInt(203), age : NumberInt(31), location : '인천'}
+   {'인천', 31} -> {userId : NumberInt(203), age : NumberInt(31), location : '서울'}
    ```
 
 드디어 totalKeysExamined 2로 되어 원하는 결과가 나왔다. 
@@ -155,10 +155,10 @@ location_1_age_1 index 구조는 아래와 같다.
    }
    ```
 
-위와 같이 index가 생성되어 있을 때 
-**query planner**가 캐싱된 쿼리 플랜이 없다면 가능한 모든 쿼리 플랜을 조회 후 첫 batch(101)를 가장 좋은 성능으로 가져오는 플랜을 캐싱한다.
-index가 최적화가 되어있지 않기 때문에 age_1_location_1 index가 채택되지 않는 경우가 발생한다.
-따라서 index를 location_1_age_1를 생성해야 했고, location_1_age_1 index는 삭제하고 prefix가 같은 location_1 또한 삭제 해야 한다.
+위와 같이 index가 생성되어 있을 때 **query planner**가 캐싱된 쿼리 플랜이 없다면  
+- 최적의 index를 먼저 찾아 보고, 존재하지 않는다면 가능한 모든 쿼리 플랜을 조회 후 첫 batch(101)를 가장 좋은 성능으로 가져오는 플랜을 캐싱한다.
+index가 최적화가 되어있지 않기 때문에 age_1_location_1 index가 채택되지 않는 경우가 발생한다. <br>
+- 따라서 index를 location_1_age_1를 생성해야 했고, location_1_age_1 index는 삭제하고 prefix가 같은 location_1 또한 삭제 해야 한다.
 
 ---
 
@@ -222,9 +222,45 @@ index가 최적화가 되어있지 않기 때문에 age_1_location_1 index가 �
    
    
    ```
+3. Scan And Order
 
+   ```
+   db.User.createIndex({age : 1, location : 1});
+   db.User.find({age : {$gte : 20, $lte : 25}, location : '서울'}).sort({userId : 1})
+      .explain("executionStats");
+   
+   {
+       "stage" : "SORT",
+      "indexName" : "location_1_age_1",
+      "nReturned" : 2.0,
+      "totalKeysExamined" : 2.0, 
+      "totalDocsExamined" : 2.0, 
+   }
+   ```
+ - 위와 같은 쿼리를 사용 하면 인덱스 탐색 후 결과를 메모리와 cpu 자원을 사용하여 정렬하게 됨
+ - 메모리 정렬은 32MB 제한 하기 때문에 주의해야함
 
+그렇다면 정렬을 활용하기 위한 인덱스 구성은?
 
+```
+   db.User.createIndex({location : 1, userId : 1, age : 1});
+   db.User.find({age : {$gte : 20, $lte : 25}, location : '서울'}).sort({userId : 1})
+      .explain("executionStats");
+
+   {
+      "stage" : "IXSCAN",
+      "indexName" : "location_1_userId_1_age_1",
+      "nReturned" : 2.0,
+      "totalKeysExamined" : 3.0, 
+      "totalDocsExamined" : 2.0, 
+   }
+```
+ - 위 쿼리는 totalKeysExamined 3이라서 효율적이지 않다고 생각할 수 있으나, IXSCAN을 했다는게 의미가 있음
+ - query planner는 totalKeysExamined 값이 낮은 index를 채택하게 됨
+ - 따라서 totalKeysExamined 값이 더 크더라도 메모리를 사용하지 않는 index를 채택하는 것이 효율적일 수 있음
+ - hint 옵션을 활용하면 됨
+
+---
 출처
 
 - https://tv.naver.com/v/11267386
