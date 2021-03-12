@@ -225,7 +225,7 @@ index가 최적화가 되어있지 않기 때문에 age_1_location_1 index가 �
 3. Scan And Order
 
    ```
-   db.User.createIndex({age : 1, location : 1});
+   db.User.createIndex({location : 1, age : 1});
    db.User.find({age : {$gte : 20, $lte : 25}, location : '서울'}).sort({userId : 1})
       .explain("executionStats");
    
@@ -257,8 +257,9 @@ index가 최적화가 되어있지 않기 때문에 age_1_location_1 index가 �
 ```
  - 위 쿼리는 totalKeysExamined 3이라서 효율적이지 않다고 생각할 수 있으나, IXSCAN을 했다는게 의미가 있음
  - query planner는 totalKeysExamined 값이 낮은 index를 채택하게 됨
- - 따라서 totalKeysExamined 값이 더 크더라도 메모리를 사용하지 않는 index를 채택하는 것이 효율적일 수 있음
- - hint 옵션을 활용하면 됨
+ - 따라서 위의 경우처럼 location_1_userId_1_age_1 index를 사용하려면 힌트옵션을 고려
+ - totalKeysExamined 값이 더 크더라도 메모리를 사용하지 않는 index를 채택하는 것이 효율적일 수 있음
+ 
 
 ---
 출처

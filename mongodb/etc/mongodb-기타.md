@@ -5,4 +5,19 @@ mongodb 4.0
  - 그래서 write가 순간적으로 몰리면 read성능 저하를 유발함.
  - 4.0 부터는 data timestamp와 consistent snapshot을 이용하여 이슈를 해결함.
 
+--- 
 
+1. locking level
+ - Global
+ - Database
+ - Collection
+ - Document
+
+2. locking mode 
+ - Shared (R) : 동시 공유, This mode is used for the read operations
+ - Exclusive (W) : 동시 공유 금지, This mode is used for the write operations
+ - Intent Shared (r) : 
+
+slowquery
+
+샤딩과 트랜잭션
